@@ -12,7 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be included
  * in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -33,7 +33,7 @@ namespace PowerAPI;
 class Core {
 	private $url, $version, $tmp_fname;
 	private $ua = "ScorePortal Updater Service (https://ScorePortal.org)";
-	
+
 	/**
 	 * Create a PowerAPI object
 	 * @param string PowerSchool server URL
@@ -47,12 +47,12 @@ class Core {
 		$this->version = $version;
 
 		if ($version == 6) {
-			throw new \Exception('PowerSchool 6 is no longer supported. Please ask your school to upgrade or revert to an older version.');	
+			throw new \Exception('PowerSchool 6 is no longer supported. Please ask your school to upgrade or revert to an older version.');
 		}
 
 		$this->tmp_fname = tempnam("/tmp/","PSCOOKIE");
 	}
-	
+
 	/**
 	 * Set user-agent to a custom value
 	 * @param string user agent
@@ -63,7 +63,7 @@ class Core {
 
 	public function _request($path, $post = false) {
 		$ch = curl_init();
-		
+
 		curl_setopt($ch, CURLOPT_URL,$this->url.$path);
 		curl_setopt($ch, CURLOPT_USERAGENT, $this->ua);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -74,14 +74,14 @@ class Core {
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 		if ($post)
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-		
+
 		$html = curl_exec($ch);
-		
+
 		curl_close($ch);
 
 		return $html;
 	}
-	
+
 	/* Authentication */
 
 	/**
@@ -89,28 +89,31 @@ class Core {
 	 * @return array authentication parameters
 	*/
 	private function _getAuthData() {
-		$html = $this->_request('');
-		
-		if (!$html) {
-			throw new \Exception('Unable to retrieve authentication tokens from PS server.');
-			//break; //Not sure why there is a break here
-		}
-		
-		preg_match('/<input type="hidden" name="pstoken" value="(.*?)" \/>/s', $html, $pstoken);
-		$data['pstoken'] = $pstoken[1];
-		
-		preg_match('/<input type="hidden" name="contextData" value="(.*?)" \/>/s', $html, $contextData);
-		$data['contextData'] = $contextData[1];
-		
-		if (!strpos($html, "<input type=hidden name=ldappassword value=''>")) {
-			$data['ldap'] = false;
-		} else {
-			$data['ldap'] = true;
-		}
-		
-		return $data;
+        $html = $this->_request('');
+
+        if (!$html) {
+            throw new \Exception('Unable to retrieve authentication tokens from PS server.');
+        }
+        //Create and Load Auth Page DOM
+        $AuthDom = new \DOMDocument();
+        $AuthDom->loadHTML($html);
+        $AuthXPath = new \DOMXPath($AuthDom);
+
+        $pstoken[1]=$AuthXPath->query('//input[@name="pstoken"]')->item(0)->getAttribute('value');
+        $data['pstoken'] = $pstoken[1];
+
+        $contextData[1]=$AuthXPath->query('//input[@name="contextData"]')->item(0)->getAttribute('value');
+        $data['contextData'] = $contextData[1];
+
+        if($AuthXPath->query('//input[@name="ldappassword"]')->length > 0){
+            $data['ldap'] = true;
+        }else{
+            $data['ldap'] = false;
+        }
+
+        return $data;
 	}
-	
+
 	/**
 	 * Attempt to authenticate against the server
 	 * @param string username
@@ -119,7 +122,7 @@ class Core {
 	*/
 	public function auth($uid, $pw) {
 		$authdata = $this->_getAuthData();
-		
+
 		$fields = array(
 					'pstoken' => $authdata['pstoken'],
 					'contextData' => $authdata['contextData'],
@@ -133,9 +136,9 @@ class Core {
 
 		if ($authdata['ldap'])
 			$fields['ldappassword'] = $pw;
-		
+
 		$result = $this->_request('guardian/home.html', $fields);
-		
+
 		if (!strpos($result, 'Grades and Attendance')) {			// This should show up instantly after login
 			preg_match('/<div class="feedback-alert">(.*?)<\/div>/s', $result, $pserror); // Pearson tell us what's wrong! We should listen to that.
 			if (!isset($pserror[1])) { // Well, okay, sometimes they don't
@@ -145,7 +148,7 @@ class Core {
 			}
 			//break; //Again not sure about break...
 		}
-		
+
 		return new User($this, $result);
 	}
 }

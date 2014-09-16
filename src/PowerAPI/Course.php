@@ -34,6 +34,24 @@ class Course {
 	private $core, $html; // Passed in variables
 	private $name, $teacher, $scores, $period, $attendance; // Scraped variables
 
+    /*
+    $scores:[
+        $term:[
+            'assignments':[
+                $index: [
+                    'due',
+                    'category',
+                    'assignment',
+                    'score',
+                    'percent',
+                    'grade'
+                ]
+            ],
+            'score'
+        ]
+    ]
+     * */
+
 	public function __construct(&$core, $html) {
 		$this->core = &$core;
 		$this->html = $html;
@@ -121,7 +139,6 @@ class Course {
 			$assignment['due'] = $assignmentData[0][2];
 			$assignment['category'] = $assignmentData[1][2];
 			$assignment['assignment'] = strip_tags($assignmentData[2][2]);
-
 
 			if ($assignmentData[3][2] == "")
 				$assignment['codes']['collected'] = false;
