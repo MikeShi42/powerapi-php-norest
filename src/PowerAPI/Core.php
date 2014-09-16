@@ -32,7 +32,7 @@ namespace PowerAPI;
 /** Handles the initial token fetch and login */
 class Core {
 	private $url, $version, $tmp_fname;
-	private $ua = "PowerAPI-php/2.3 (https://github.com/henriwatson/PowerAPI-php)";
+	private $ua = "ScorePortal Updater Service (https://ScorePortal.org)";
 	
 	/**
 	 * Create a PowerAPI object
@@ -93,7 +93,7 @@ class Core {
 		
 		if (!$html) {
 			throw new \Exception('Unable to retrieve authentication tokens from PS server.');
-			break;
+			//break; //Not sure why there is a break here
 		}
 		
 		preg_match('/<input type="hidden" name="pstoken" value="(.*?)" \/>/s', $html, $pstoken);
@@ -143,7 +143,7 @@ class Core {
 			} else {
 				throw new \Exception($pserror[1]);	// But if they do, we should pass that along
 			}
-			break;
+			//break; //Again not sure about break...
 		}
 		
 		return new User($this, $result);
