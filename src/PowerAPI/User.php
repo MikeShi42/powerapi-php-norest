@@ -55,31 +55,69 @@ class User {
 	 * Parse the authenticated user's grades from the retrieved home page
 	 * @return array
 	*/
-	private function _createCourses() {
-		$result = $this->homeContents;
+    private function _createCourses() {
+        $result = $this->homeContents;
 
-		/* Parse different terms */
-		preg_match_all('/<tr class="center th2">(.*?)<\/tr>/s', $result, $terms);
-		preg_match_all('/<th rowspan="2">(.*?)<\/th>/s', $terms[0][0], $terms);
-		
-		$terms = $terms[1];
-		$termsCount = count($terms);
-		unset($terms[0]); // Remove Exp
-		unset($terms[1]); // Remove Course
-		unset($terms[$termsCount-2]); // Remove Abscences
-		unset($terms[$termsCount-1]); // Remove Tardies
-		$terms = array_merge(array(), $terms); // Reorder
+        //Create and Load Auth Page DOM
+        $HomeDom = new \DOMDocument();
+        $HomeDom->substituteEntities = false;
+        $HomeDom->formatOutput = false;
+        $HomeDom->resolveExternals = false;
+        $HomeDom->recover = true;
+        $HomeDom->loadHTML($result);
+        $HomeXPath = new \DOMXPath($HomeDom);
 
-		/* Parse classes */
-		preg_match_all('/<tr class="center" bgcolor="(.*?)">(.*?)<\/tr>/s', $result, $classes, PREG_SET_ORDER);
 
-		foreach ($classes as $class) {
-			if (preg_match('/<td align="left">(.*?)(&nbsp;|&bbsp;)<br>(.*?)<a href="mailto:(.*?)">(.*?)<\/a><\/td>/s', $class[2]))
-				$classesA[] = new Course($this->core, $class[2], $terms);
-		}
-		
-		return $classesA;
-	}
+        /* Parse different terms */
+
+        //Determine if the terms are going to be using td (SM) or th (Arc) tags.
+        $termTag = 'th';
+        //Naive assumption that they will always use rowspan="2"
+        if($HomeXPath->query('//td[@rowspan="2"]')->length > 0){
+            $termTag='td';
+        }
+
+        $tableHeadElems = $HomeXPath->query('//'.$termTag.'[@rowspan="2"]');
+        $startIndex = -1;
+
+        //Find the start index of the term listing
+        foreach($tableHeadElems as $key=>$item){
+            //Assumption that Exp will always be first
+            if(strcmp($item->nodeValue, "Exp") == 0){
+                $startIndex = $key;
+                break;
+            }
+        }
+
+        //If terms are not found
+        if($startIndex == -1){
+            throw new \Exception('Unable to find terms.');
+        }
+
+        //Grab the terms
+        $terms = [];
+        for($i=$startIndex+2; $i<$tableHeadElems->length-$startIndex-2; $i++){
+            $terms[] = $tableHeadElems->item($i)->nodeValue;
+        }
+
+        //Store the table that holds the classes and grades
+        $tableElement = $HomeXPath->query('../..', $tableHeadElems->item(0))->item(0);
+
+        /* Parse classes */
+
+        //Find all table rows
+        $tableRows = $HomeXPath->query('tr', $tableElement);
+        foreach($tableRows as $index=>$node){
+            //Get all elements in table row
+            $classLinks = $HomeXPath->query('td/a[contains(@href, "scores.html")]', $node);
+            echo $classLinks->length;
+            if($classLinks->length > 0){
+                $classesA[] = new Course($this->core, $this->DOMinnerHTML($tableRows->item($index)), $terms);
+            }
+        }
+
+        return $classesA;
+    }
 
 	/**
 	 * Parse the school's name from the retrieved home page
@@ -108,4 +146,19 @@ class User {
 	public function getCourses() {
 		return $this->courses;
 	}
+
+    //Get innerHTMl of DOMNode
+    function DOMinnerHTML($element)
+    {
+        $innerHTML = "";
+        $children = $element->childNodes;
+        foreach ($children as $child)
+        {
+            $tmp_dom = new \DOMDocument();
+            $tmp_dom->appendChild($tmp_dom->importNode($child, true));
+            $innerHTML.=trim($tmp_dom->saveHTML());
+        }
+        //Replace encoded ampersand with symbol.
+        return str_replace('&amp;', '&', $innerHTML);
+    }
 }
