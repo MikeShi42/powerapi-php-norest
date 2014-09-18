@@ -32,7 +32,7 @@ namespace PowerAPI;
 /** Handles post-authentication functions. (fetching transcripts, parsing data, etc.) */
 class Course {
 	private $core, $html; // Passed in variables
-	private $name, $teacher, $scores, $period, $attendance; // Scraped variables
+    private $name, $teacher, $scores, $period, $attendance, $roomNumber, $terms; // Scraped variables
 
     /*
     $scores:[
@@ -52,12 +52,13 @@ class Course {
     ]
      * */
 
-	public function __construct(&$core, $html) {
-		$this->core = &$core;
-		$this->html = $html;
+    public function __construct(&$core, $html, $t) {
+        $this->core = &$core;
+        $this->html = $html;
+        $this->terms = $t;
 
-		$this->_populateCourse();
-	}
+        $this->_populateCourse();
+    }
 
 	/**
 	 * Parse an <A> tag
@@ -79,100 +80,112 @@ class Course {
 	 * Populate the object with the course's information
 	 * @return void
 	*/
-	private function _populateCourse() {
-		preg_match('/<td align="left">(.*?)(&nbsp;|&bbsp;)<br>(.*?)<a href="mailto:(.*?)">(.*?)<\/a><\/td>/s', $this->html, $classData);
-		$this->name = $classData[1];
-		$this->teacher = Array(
-			'name' => $classData[5],
-			'email' => $classData[4]
-		);
+    private function _populateCourse() {
+        preg_match('/<td align="left">(?:\s*)(.*?)(?:&nbsp;)?(?:\s*)<br>(?:.*?)<a (?:href|onclick)="(javascript|mailto):(.*?)">(.*?)<\/a>(?:\s*)(?:&nbsp;)?(?:-&nbsp;Rm: )?(.*?)(?:\s*?)<\/td>/s', $this->html, $classData);
+        $this->name = $classData[1];
+        //If SM, regex will match differently
+        if(strcmp($classData[2], 'javascript') === 0){
+            $this->teacher = Array(
+                'name' => $classData[5],
+                'email' => 'Not Available'
+            );
+            $this->roomNumber = 'Not Available';
+        }elseif(strcmp($classData[2], 'mailto') === 0){
+            $this->name = $classData[1];
+            $this->teacher = Array(
+                'name' => $classData[4],
+                'email' => $classData[3]
+            );
+            $this->roomNumber = $classData[5];
+        }
 
-		preg_match_all('/<td>(.*?)<\/td>/s', $this->html, $databits, PREG_SET_ORDER);
-		$this->period = $databits[0][1];
+        preg_match_all('/<td>(.*?)<\/td>/s', $this->html, $databits, PREG_SET_ORDER);
+        $this->period = $databits[0][1];
 
-		$absences = $this->_splitA($databits[count($databits)-2][1]);
-		if (!isset($absences['url'])) {
-			$this->attendance['absences']['count'] = $absences['title'];
-		} else {
-			$this->attendance['absences'] = Array(
-				'count' => $absences['title'],
-				'url' => $absences['url']
-			);
-		}
+        $absences = $this->_splitA($databits[count($databits)-2][1]);
+        if (!isset($absences['url'])) {
+            $this->attendance['absences']['count'] = $absences['title'];
+        } else {
+            $this->attendance['absences'] = Array(
+                'count' => $absences['title'],
+                'url' => $absences['url']
+            );
+        }
 
-		$tardies = $this->_splitA($databits[count($databits)-1][1]);
-		if (!isset($tardies['url'])) {
-			$this->attendance['tardies']['count'] = $tardies['title'];
-		} else {
-			$this->attendance['tardies'] = Array(
-				'count' => $tardies['title'],
-				'url' => $tardies['url']
-			);
-		}
+        $tardies = $this->_splitA($databits[count($databits)-1][1]);
+        if (!isset($tardies['url'])) {
+            $this->attendance['tardies']['count'] = $tardies['title'];
+        } else {
+            $this->attendance['tardies'] = Array(
+                'count' => $tardies['title'],
+                'url' => $tardies['url']
+            );
+        }
 
-		preg_match_all('/<a href="scores.html\?(.*?)">(.*?)<\/a>/s', $this->html, $scores, PREG_SET_ORDER);
-		
-		foreach ($scores as $score) {
-			preg_match('/frn\=(.*?)\&fg\=(.*)/s', $score[1], $URLbits);
-			$scoreT = explode('<br>', $score[2]);
-			if ($score[2] !== '--' && !is_numeric($scoreT[0])) {	// This is here to handle special cases with schools using letter grades
-				$this->scores[$URLbits[2]]['score'] = $scoreT[1];		//  or grades not being posted
-				$this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
-			} else if ($score[2] !== '--') {
-				$this->scores[$URLbits[2]]['score'] = $scoreT[0];
-				$this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
-			}
-		}
-	}
+        preg_match_all('/<a href="scores.html\?(.*?)">(.*?)<\/a>/s', $this->html, $scores, PREG_SET_ORDER);
+
+        foreach ($scores as $score) {
+            preg_match('/frn\=(.*?)\&fg\=(.*)/s', $score[1], $URLbits);
+            $scoreT = explode('<br>', $score[2]);
+            if ($score[2] !== '--' && !is_numeric($scoreT[0])) {	// This is here to handle special cases with schools using letter grades
+                $this->scores[$URLbits[2]]['score'] = $scoreT[1];		//  or grades not being posted
+                $this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
+            } else if ($score[2] !== '--') {
+                $this->scores[$URLbits[2]]['score'] = $scoreT[0];
+                $this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
+            }
+        }
+    }
 
 	/**
 	 * Fetch the information for a term and store it
 	 * @return void
 	*/
-	private function _fetchTerm($term) {
-		$result = $this->core->_request('guardian/'.$this->scores[$term]['url']);
+    private function _fetchTerm($term) {
+        $result = $this->core->_request('guardian/'.$this->scores[$term]['url']);
 
-		preg_match('/<table border="0" cellpadding="0" cellspacing="0" align="center" width="99%">(.*?)<\/table>/s', $result, $assignments);
-		preg_match_all('/<tr bgcolor="(.*?)">(.*?)<\/tr>/s', $assignments[1], $assignments, PREG_SET_ORDER);
-		foreach ($assignments as $assignmentHTML) {
-			preg_match_all('/<td(.*?)?>(.*?)<\/td>/s', $assignmentHTML[2], $assignmentData, PREG_SET_ORDER);
-			$assignment['due'] = $assignmentData[0][2];
-			$assignment['category'] = $assignmentData[1][2];
-			$assignment['assignment'] = strip_tags($assignmentData[2][2]);
+        preg_match('/<table border="0" cellpadding="0" cellspacing="0" align="center" width="99%">(.*?)<\/table>/s', $result, $assignments);
+        preg_match_all('/<tr bgcolor="(.*?)">(.*?)<\/tr>/s', $assignments[1], $assignments, PREG_SET_ORDER);
+        foreach ($assignments as $assignmentHTML) {
+            preg_match_all('/<td(.*?)?>(.*?)<\/td>/s', $assignmentHTML[2], $assignmentData, PREG_SET_ORDER);
+            $assignment['due'] = $assignmentData[0][2];
+            $assignment['category'] = strip_tags($assignmentData[1][2]);
+            $assignment['assignment'] = strip_tags($assignmentData[2][2]);
 
-			if ($assignmentData[3][2] == "")
-				$assignment['codes']['collected'] = false;
-			else
-				$assignment['codes']['collected'] = true;
-			if ($assignmentData[4][2] == "")
-				$assignment['codes']['late'] = false;
-			else
-				$assignment['codes']['late'] = true;
-			if ($assignmentData[5][2] == "")
-				$assignment['codes']['missing'] = false;
-			else
-				$assignment['codes']['missing'] = true;
-			if ($assignmentData[6][2] == "")
-				$assignment['codes']['exempt'] = false;
-			else
-				$assignment['codes']['exempt'] = true;
-			if ($assignmentData[7][2] == "")
-				$assignment['codes']['excluded'] = false;
-			else
-				$assignment['codes']['excluded'] = true;
 
-			$assignment['score'] = strip_tags($assignmentData[8][2]);
-			$assignment['percent'] = $assignmentData[9][2];
-			$assignment['grade'] = $assignmentData[10][2];
+            if ($assignmentData[3][2] == "")
+                $assignment['codes']['collected'] = false;
+            else
+                $assignment['codes']['collected'] = true;
+            if ($assignmentData[4][2] == "")
+                $assignment['codes']['late'] = false;
+            else
+                $assignment['codes']['late'] = true;
+            if ($assignmentData[5][2] == "")
+                $assignment['codes']['missing'] = false;
+            else
+                $assignment['codes']['missing'] = true;
+            if ($assignmentData[6][2] == "")
+                $assignment['codes']['exempt'] = false;
+            else
+                $assignment['codes']['exempt'] = true;
+            if ($assignmentData[7][2] == "")
+                $assignment['codes']['excluded'] = false;
+            else
+                $assignment['codes']['excluded'] = true;
 
-			$data[] = $assignment;
-		}
-		$this->scores[$term]['assignments'] = $data;
+            $assignment['score'] = strip_tags($assignmentData[8][2]);
+            $assignment['percent'] = $assignmentData[9][2];
+            $assignment['grade'] = $assignmentData[10][2];
 
-		preg_match_all('/<div class="comment">.*?<pre>(.*?)<\/pre>.*?<\/div>/s', $result, $comments, PREG_SET_ORDER);
-		$this->comments[$term]['teacher'] = $comments[0][1];
-		$this->comments[$term]['section'] = $comments[1][1];
-	}
+            $data[] = $assignment;
+        }
+        $this->scores[$term]['assignments'] = $data;
+
+        preg_match_all('/<div class="comment">.*?<pre>(.*?)<\/pre>.*?<\/div>/s', $result, $comments, PREG_SET_ORDER);
+        $this->comments[$term]['teacher'] = $comments[0][1];
+        $this->comments[$term]['section'] = $comments[1][1];
+    }
 
 	/**
 	 * Return the course's name
