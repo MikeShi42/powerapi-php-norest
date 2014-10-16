@@ -64,7 +64,9 @@ class User {
         $HomeDom->formatOutput = false;
         $HomeDom->resolveExternals = false;
         $HomeDom->recover = true;
+	libxml_use_internal_errors(true);
         $HomeDom->loadHTML($result);
+	libxml_clear_errors();
         $HomeXPath = new \DOMXPath($HomeDom);
 
 
@@ -110,7 +112,7 @@ class User {
         foreach($tableRows as $index=>$node){
             //Get all elements in table row
             $classLinks = $HomeXPath->query('td/a[contains(@href, "scores.html")]', $node);
-            echo $classLinks->length;
+//            echo $classLinks->length;
             if($classLinks->length > 0){
                 $classesA[] = new Course($this->core, $this->DOMinnerHTML($tableRows->item($index)), $terms);
             }
