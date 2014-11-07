@@ -241,4 +241,16 @@ class Course {
 
 		return $this->scores[$term]['assignments'];
 	}
+
+	public function getTeacher() {
+		return $this->teacher;
+	}
+
+	public function getPeriod() {
+		return $this->period;
+	}
+
+	public function getRoomNumber() {
+		return $this->roomNumber;
+	}
 }
