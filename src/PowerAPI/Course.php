@@ -87,9 +87,9 @@ class Course {
         if(strcmp($classData[2], 'javascript') === 0){
             $this->teacher = Array(
                 'name' => $classData[5],
-                'email' => 'Not Available'
+                'email' => null
             );
-            $this->roomNumber = 'Not Available';
+            $this->roomNumber = null;
         }elseif(strcmp($classData[2], 'mailto') === 0){
             $this->name = $classData[1];
             $this->teacher = Array(
@@ -240,5 +240,17 @@ class Course {
 		}
 
 		return $this->scores[$term]['assignments'];
+	}
+
+	public function getTeacher() {
+		return $this->teacher;
+	}
+
+	public function getPeriod() {
+		return $this->period;
+	}
+
+	public function getRoomNumber() {
+		return $this->roomNumber;
 	}
 }

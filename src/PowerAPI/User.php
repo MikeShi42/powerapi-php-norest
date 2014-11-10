@@ -149,6 +149,27 @@ class User {
 		return $this->courses;
 	}
 
+	/*
+	 * Pull the student assignment list from the server, timeframe set to 360
+	 * @return string PPStudentAsmList
+	 */
+	public function fetchAssignmentList(){
+		$result = $this->core->_request('guardian/ppstudentasmtlist.html?timeframe=360');
+		return $result;
+	}
+
+	/**
+	 * Parse the user's GPA
+	 * @return double user's GPA
+	 */
+	public function getGPA() {
+		preg_match('/<td align="center">.*?GPA.*?:(.*?)<\/td>/s', $this->homeContents, $gpa);
+		$gpaVal = trim($gpa[1]);
+		if(is_numeric($gpaVal))
+			return $gpaVal;
+		return false;
+	}
+
     //Get innerHTMl of DOMNode
     function DOMinnerHTML($element)
     {
