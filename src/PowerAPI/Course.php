@@ -130,6 +130,7 @@ class Course {
             if ($score[2] !== '--' && !is_numeric($scoreT[0])) {	// This is here to handle special cases with schools using letter grades
                 $this->scores[$URLbits[2]]['score'] = $scoreT[1];		//  or grades not being posted
                 $this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
+		$this->scores[$URLbits[2]]['letter'] = $scoreT[0]; //also record letter grade
             } else if ($score[2] !== '--') {
                 $this->scores[$URLbits[2]]['score'] = $scoreT[0];
                 $this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
@@ -252,5 +253,12 @@ class Course {
 
 	public function getRoomNumber() {
 		return $this->roomNumber;
+	}
+
+	public function getLetters(){
+		foreach ($this->scores as $term => $data) {
+			$return[$term] = $data['letter'];
+		}
+		return $return;
 	}
 }
