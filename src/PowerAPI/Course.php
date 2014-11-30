@@ -199,7 +199,7 @@ class Course {
 	$substr = substr($result, $index, strpos($result, '</table>', $index) - $index); //only look at the text inside this table
 	preg_match_all( //match each row
 		'#<tr>\s*<td>([^<]+)</td>\s*' . //capture first cell, which will either be "Category Based" or "Total Points"
-		'(?:<td[^>]+>([^<]*)</td>\s*)' . '(?:<td[^>]+>([^<]*)</td>\s*)' . '(?:<td[^>]+>([^<]*)</td>\s*)' . '</tr>\s*#' //and capture next 3 cells
+		'<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '</tr>\s*#' //and capture next 3 cells
 		, $substr, $weights, PREG_SET_ORDER);
 	//TODO no information on dropped scores with "Total Points"
 	if($weights[0][1] === 'Total Points')
@@ -208,7 +208,6 @@ class Course {
 		$this->categories[$term] = null;
 	}else
 	{
-		$data = array();
 		foreach($weights as $rawCategory)
 		{
 			if($rawCategory[1] !== 'Category Based')
