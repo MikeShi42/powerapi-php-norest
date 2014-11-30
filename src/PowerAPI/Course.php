@@ -50,6 +50,12 @@ class Course {
             'score'
         ]
     ]
+    $categories:[
+        $categoryName:[
+            'weight',
+            'drops'
+        ]
+    ]
      * */
 
     public function __construct(&$core, $html, $t) {
@@ -147,6 +153,7 @@ class Course {
 
         preg_match('/<table border="0" cellpadding="0" cellspacing="0" align="center" width="99%">(.*?)<\/table>/s', $result, $assignments);
         preg_match_all('/<tr bgcolor="(.*?)">(.*?)<\/tr>/s', $assignments[1], $assignments, PREG_SET_ORDER);
+	$data = array(); //in case there are no assignments
         foreach ($assignments as $assignmentHTML) {
             preg_match_all('/<td(.*?)?>(.*?)<\/td>/s', $assignmentHTML[2], $assignmentData, PREG_SET_ORDER);
             $assignment['due'] = $assignmentData[0][2];
@@ -186,6 +193,32 @@ class Course {
         preg_match_all('/<div class="comment">.*?<pre>(.*?)<\/pre>.*?<\/div>/s', $result, $comments, PREG_SET_ORDER);
         $this->comments[$term]['teacher'] = $comments[0][1];
         $this->comments[$term]['section'] = $comments[1][1];
+
+	$index = strpos($result, '<tr><th class="bold">Term ' . $term . '</th>'); //find the term (assuming this matches the right place -_-)
+	$index = strpos($result, '<tr>', $index + 30); //find where the rows start
+	$substr = substr($result, $index, strpos($result, '</table>', $index) - $index); //only look at the text inside this table
+	preg_match_all( //match each row
+		'#<tr>\s*<td>([^<]+)</td>\s*' . //capture first cell, which will either be "Category Based" or "Total Points"
+		'(?:<td[^>]+>([^<]*)</td>\s*)' . '(?:<td[^>]+>([^<]*)</td>\s*)' . '(?:<td[^>]+>([^<]*)</td>\s*)' . '</tr>\s*#' //and capture next 3 cells
+		, $substr, $weights, PREG_SET_ORDER);
+	//TODO no information on dropped scores with "Total Points"
+	if($weights[0][1] === 'Total Points')
+	{
+		//unweighted
+		$this->categories[$term] = null;
+	}else
+	{
+		$data = array();
+		foreach($weights as $rawCategory)
+		{
+			if($rawCategory[1] !== 'Category Based')
+				continue; //this should never happen
+			$category = array();
+			$category['weight'] = $rawCategory[3];
+			$category['drops'] = $rawCategory[4];
+			$this->categories[$term][$rawCategory[2]] = $category; //$this->categories['P2']['Homework'] = $category;
+		}
+	}
     }
 
 	/**
@@ -260,5 +293,26 @@ class Course {
 			$return[$term] = $data['letter'];
 		}
 		return $return;
+	}
+
+	public function getLatestTerm()
+	{
+		$terms = array_keys($this->scores);
+		return $terms[count($terms) - 1];
+	}
+
+	//if this returns null, the class is unweighted
+	public function getCategoryDetails($term)
+	{
+		//mostly copy-pasted from getAssignments
+		$term = strtoupper($term);
+		if (!isset($this->scores[$term]))
+			return false;
+
+		if (!isset($this->categories[$term])) {
+			$this->_fetchTerm($term);
+		}
+
+		return $this->categories[$term];
 	}
 }
