@@ -215,7 +215,7 @@ class Course {
 			$category = array();
 			$category['weight'] = $rawCategory[3];
 			$category['drops'] = $rawCategory[4];
-			$this->categories[$term][$rawCategory[2]] = $category; //$this->categories['P2']['Homework'] = $category;
+			$this->categories[$term][html_entity_decode($rawCategory[2])] = $category; //$this->categories['P2']['Homework'] = $category;
 		}
 	}
     }
