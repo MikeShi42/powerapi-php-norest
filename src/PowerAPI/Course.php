@@ -130,18 +130,22 @@ class Course {
 
         preg_match_all('/<a href="scores.html\?(.*?)">(.*?)<\/a>/s', $this->html, $scores, PREG_SET_ORDER);
 
-        foreach ($scores as $score) {
-            preg_match('/frn\=(.*?)\&fg\=(.*)/s', $score[1], $URLbits);
-            $scoreT = explode('<br>', $score[2]);
-            if ($score[2] !== '--' && !is_numeric($scoreT[0])) {	// This is here to handle special cases with schools using letter grades
-                $this->scores[$URLbits[2]]['score'] = $scoreT[1];		//  or grades not being posted
-                $this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
-		$this->scores[$URLbits[2]]['letter'] = $scoreT[0]; //also record letter grade
-            } else if ($score[2] !== '--') {
-                $this->scores[$URLbits[2]]['score'] = $scoreT[0];
-                $this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
-            }
-        }
+	foreach ($scores as $score) {
+		preg_match('/frn\=(.*?)\&fg\=(.*)/s', $score[1], $URLbits);
+		$scoreT = explode('<br>', $score[2]);
+		if ($score[2] !== '--' && !is_numeric($scoreT[0])) {	// This is here to handle special cases with schools using letter grades
+			$this->scores[$URLbits[2]]['score'] = $scoreT[1];		//  or grades not being posted
+			$this->scores[$URLbits[2]]['letter'] = $scoreT[0]; //also record letter grade
+		} else if ($score[2] !== '--') {
+			$this->scores[$URLbits[2]]['score'] = $scoreT[0];
+			$this->scores[$URLbits[2]]['letter'] = '';
+		}else
+		{
+			$this->scores[$URLbits[2]]['score'] = 0;
+			$this->scores[$URLbits[2]]['letter'] = '-';
+		}
+		$this->scores[$URLbits[2]]['url'] = 'scores.html?'.$score[1];
+	}
     }
 
 	/**
@@ -306,8 +310,6 @@ class Course {
 
 	public function getLatestTerm()
 	{
-		if(is_null($this->scores)) //in this case, assume the class has no assignments
-			return null;
 		$terms = array_keys($this->scores);
 		return $terms[count($terms) - 1];
 	}
