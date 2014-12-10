@@ -328,4 +328,9 @@ class Course {
 
 		return $this->categories[$term];
 	}
+	
+	
+	public function getCore(){
+		return $this->core;
+	}
 }
