@@ -85,10 +85,6 @@ class Core {
 
 		return $html;
 	}
-	
-	public function _getTransactionID(){
-		return md5($this->tmp_fname);
-	}
 
 	/* Authentication */
 
@@ -158,5 +154,9 @@ class Core {
 		}
 
 		return new User($this, $result);
+	}
+	
+	public function getTransactionID(){
+		return md5($this->tmp_fname);
 	}
 }
