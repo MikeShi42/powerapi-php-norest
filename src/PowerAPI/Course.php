@@ -152,6 +152,7 @@ class Course {
         $result = $this->core->_request('guardian/'.$this->scores[$term]['url']);
 
         preg_match('/<table border="0" cellpadding="0" cellspacing="0" align="center" width="99%">(.*?)<\/table>/s', $result, $assignments);
+	if(!array_key_exists(1, $assignments)){ \Illuminate\Support\Facades\Log::info("{$this->teacher['name']}'s {$this->name} misparsed in PowerAPI."); \Illuminate\Support\Facades\Log::info($result); }
         preg_match_all('/<tr bgcolor="(.*?)">(.*?)<\/tr>/s', $assignments[1], $assignments, PREG_SET_ORDER);
 	$data = array(); //in case there are no assignments
         foreach ($assignments as $assignmentHTML) {
@@ -197,6 +198,15 @@ class Course {
 	$index = strpos($result, '<tr><th class="bold">Term ' . $term . '</th>'); //find the term (assuming this matches the right place -_-)
 	$index = strpos($result, '<tr>', $index + 30); //find where the rows start
 	$substr = substr($result, $index, strpos($result, '</table>', $index) - $index); //only look at the text inside this table
+	if(($this->name === 'Spanish 1A' && $this->teacher['name'] === 'Gaeta-Catano, Marisa')
+		|| ($this->name === 'Chemistry (AP) A' && $this->teacher['name'] === 'Young, Barbara E')
+		|| ($this->name === 'Physical Educ 10A' && $this->teacher['name'] === 'Blotzer, Kyle')
+		|| ($this->name === 'US History (AP) A' && $this->teacher['name'] === 'Brown-Hom, Heather')
+		|| ($this->name === 'Biology A' && $this->teacher['name'] === 'Rapacon, Karen B'))
+	{
+		\Illuminate\Support\Facades\Log::info("{$this->teacher['name']}'s {$this->name} class page (note categories)");
+		\Illuminate\Support\Facades\Log::info($result);
+	};
 	preg_match_all( //match each row
 		'#<tr>\s*<td>([^<]+)</td>\s*' . //capture first cell, which will either be "Category Based" or "Total Points"
 		'<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '</tr>\s*#' //and capture next 3 cells
@@ -296,6 +306,8 @@ class Course {
 
 	public function getLatestTerm()
 	{
+		if(is_null($this->scores)) //in this case, assume the class has no assignments
+			return null;
 		$terms = array_keys($this->scores);
 		return $terms[count($terms) - 1];
 	}
