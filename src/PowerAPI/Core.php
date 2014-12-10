@@ -29,6 +29,8 @@
 
 namespace PowerAPI;
 
+use Illuminate\Support\Facades\Event as Event;
+
 /** Handles the initial token fetch and login */
 class Core {
 	private $url, $version, $tmp_fname;
@@ -77,9 +79,15 @@ class Core {
 
 		$html = curl_exec($ch);
 
+		Event::fire('PowerAPI.request', array($html, $path, md5($this->tmp_fname)));
+		
 		curl_close($ch);
 
 		return $html;
+	}
+	
+	public function _getTransactionID(){
+		return md5($this->tmp_fname);
 	}
 
 	/* Authentication */
