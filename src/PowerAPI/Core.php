@@ -83,7 +83,8 @@ class Core {
 		
 		curl_close($ch);
 
-		return $html;
+		$realCharset = preg_match('<meta http-equiv="Content-Type" content="text/html; charset=([^"]+)" />', $html, $matches) ? $matches[1] : 'ISO-8859-1';
+		return iconv('UTF-8', "$realCharset//TRANSLIT", $html); //interpret the string with the proper encoding
 	}
 
 	/* Authentication */

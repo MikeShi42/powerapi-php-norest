@@ -230,7 +230,6 @@ class Course {
 			$category['weight'] = $rawCategory[3];
 			$category['drops'] = $rawCategory[4];
 			$categoryName = html_entity_decode($rawCategory[2]);
-			$categoryName = mb_convert_encoding($categoryName, 'ascii', mb_detect_encoding($categoryName));
 			$this->categories[$term][$categoryName] = $category; //$this->categories['P2']['Homework'] = $category;
 		}
 	}
