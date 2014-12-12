@@ -199,11 +199,12 @@ class Course {
         $this->comments[$term]['teacher'] = $comments[0][1];
         $this->comments[$term]['section'] = $comments[1][1];
 
-	$index = strpos($result, '<tr><th class="bold">Term ' . $term . '</th>'); //find the term (assuming this matches the right place -_-)
-	$index = strpos($result, '<tr>', $index + 30); //find where the rows start
-	$substr = substr($result, $index, strpos($result, '</table>', $index) - $index); //only look at the text inside this table
+
+	$start = strpos($result, '<h2>Special Weighting</h2>');
+	$end = strpos($result, '<!-- end student content -->', $start);
+	$substr = substr($result, $start, $end - $start);
 	preg_match_all( //match each row
-		'#<tr>\s*<td>([^<]+)</td>\s*' . //capture first cell, which will either be "Category Based" or "Total Points"
+		'#<tr>\s*<td>(Category Based|Total Points)</td>\s*' . //capture first cell, which will either be "Category Based" or "Total Points"
 		'<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '</tr>\s*#' //and capture next 3 cells
 		, $substr, $weights, PREG_SET_ORDER);
 	//TODO no information on dropped scores with "Total Points"
@@ -211,18 +212,18 @@ class Course {
 	if($weights[0][1] === 'Total Points')
 	{
 		//unweighted
-		$this->categories[$term] = null;
+		$this->categories = null;
 	}else
 	{
 		foreach($weights as $rawCategory)
 		{
-			if($rawCategory[1] !== 'Category Based')
-				continue; //this should never happen
+			$categoryName = html_entity_decode($rawCategory[2]);
+			if($rawCategory[1] !== 'Category Based' || array_key_exists($categoryName, $this->categories))
+				continue;
 			$category = array();
 			$category['weight'] = $rawCategory[3];
 			$category['drops'] = $rawCategory[4];
-			$categoryName = html_entity_decode($rawCategory[2]);
-			$this->categories[$term][$categoryName] = $category; //$this->categories['P2']['Homework'] = $category;
+			$this->categories[$categoryName] = $category; //$this->categories['Homework'] = $category;
 		}
 	}
     }
@@ -308,18 +309,15 @@ class Course {
 	}
 
 	//if this returns null, the class is unweighted
-	public function getCategoryDetails($term)
+	public function getCategoryDetails()
 	{
 		//mostly copy-pasted from getAssignments
-		$term = strtoupper($term);
-		if (!isset($this->scores[$term]))
-			return false;
-
+		$term = $this->getLatestTerm();
 		if (!isset($this->categories[$term])) {
 			$this->_fetchTerm($term);
 		}
 
-		return $this->categories[$term];
+		return $this->categories;
 	}
 	
 	
