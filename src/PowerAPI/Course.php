@@ -215,6 +215,7 @@ class Course {
 		$this->categories = null;
 	}else
 	{
+		$this->categories = array();
 		foreach($weights as $rawCategory)
 		{
 			$categoryName = html_entity_decode($rawCategory[2]);
