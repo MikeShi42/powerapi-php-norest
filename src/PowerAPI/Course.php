@@ -208,8 +208,8 @@ class Course {
 		'<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '<td[^>]+>([^<]*)</td>\s*' . '</tr>\s*#' //and capture next 3 cells
 		, $substr, $weights, PREG_SET_ORDER);
 	//TODO no information on dropped scores with "Total Points"
-	if(!array_key_exists(0, $weights)) \Illuminate\Support\Facades\Log::info("{$this->teacher['name']}'s {$this->name} misparsed weights, transaction {$this->core->getTransactionID()}");
-	if($weights[0][1] === 'Total Points')
+	if(!array_key_exists(0, $weights)) \Illuminate\Support\Facades\Log::info("{$this->teacher['name']}'s {$this->name} misparsed weights, transaction {$this->core->getTransactionID()}, assuming unweighted");
+	if(!array_key_exists(0, $weights) || $weights[0][1] === 'Total Points')
 	{
 		//unweighted
 		$this->categories = null;
