@@ -87,7 +87,7 @@ class Course {
 	 * @return void
 	*/
     private function _populateCourse() {
-        preg_match('/<td align="left">(?:\s*)(.*?)(?:&nbsp;)?(?:\s*)<br>(?:.*?)<a (?:href|onclick)="(javascript|mailto):(.*?)">(.*?)<\/a>(?:\s*)(?:&nbsp;)?(?:-&nbsp;Rm: )?(.*?)(?:\s*?)<\/td>/s', $this->html, $classData);
+        preg_match('/<td align="left">(?:\s*)(.*?)(?:&nbsp;)?(?:<.*?)?<br>(?:.*?)<a (?:href|onclick)="(javascript|mailto):(.*?)">(.*?)<\/a>(?:\s*)(?:&nbsp;)?(?:-&nbsp;Rm: )?(.*?)(?:\s*?)<\/td>/s', $this->html, $classData);
         $this->name = $classData[1];
         //If SM, regex will match differently
         if(strcmp($classData[2], 'javascript') === 0){
