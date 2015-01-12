@@ -74,6 +74,7 @@ class Core {
 		curl_setopt($ch, CURLOPT_AUTOREFERER, true);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
 		if ($post)
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
 
