@@ -1,5 +1,5 @@
 {
-    "name": "powerapi/powerapi-php",
+    "name": "powerapi/powerapi-php-norest",
     "require": {
     	"php": ">= 5.1.2"
     },
